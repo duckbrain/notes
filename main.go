@@ -3,6 +3,7 @@ package main
 import "fmt"
 import "os"
 import "os/exec"
+import "os/user"
 import "time"
 import "strings"
 import "github.com/olebedev/when"
@@ -32,13 +33,27 @@ func main() {
 		date = time.Now()
 	}
 
-	dateString := date.Format("2006-01-02")
-	fileName := fmt.Sprintf("~/Documents/%v/%v-%v.md", folder, folder, dateString)
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Println("Error finding home directory")
+		return
+	}
 
-	cmd := exec.Command("vim", fileName)
+	dateString := date.Format("2006-01-02")
+	fileName := fmt.Sprintf("%v/Documents/%v/%v-%v.md", usr.HomeDir, folder, folder, dateString)
+
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = os.Getenv("VISUAL")
+	}
+	if editor == "" {
+		editor = "vim"
+	}
+
+	cmd := exec.Command(editor, fileName)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		fmt.Println(err)
 		return
