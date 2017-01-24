@@ -1,14 +1,20 @@
 package main
 
-import "fmt"
-import "os"
-import "os/exec"
-import "os/user"
-import "time"
-import "strings"
-import "github.com/olebedev/when"
-import "github.com/olebedev/when/rules/en"
-import "github.com/olebedev/when/rules/common"
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"os/user"
+	"strings"
+	"time"
+	"path"
+
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/en"
+)
+
+var DocumentsDir string
 
 func main() {
 	if len(os.Args) < 2 {
@@ -38,9 +44,14 @@ func main() {
 		fmt.Println("Error finding home directory")
 		return
 	}
+	DocumentsDir = path.Join(usr.HomeDir, "Documents")
+
+	notebook = Notebook{name:folder}
+	notebook.Load()
 
 	dateString := date.Format("2006-01-02")
-	fileName := fmt.Sprintf("%v/Documents/%v/%v-%v.md", usr.HomeDir, folder, folder, dateString)
+	fileName := fmt.Sprintf("%v-%v.md", usr.HomeDir, folder, folder, dateString)
+	notebook.FilePath(
 
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
