@@ -46,12 +46,13 @@ func main() {
 	}
 	DocumentsDir = path.Join(usr.HomeDir, "Documents")
 
-	notebook = Notebook{name:folder}
-	notebook.Load()
-
-	dateString := date.Format("2006-01-02")
-	fileName := fmt.Sprintf("%v-%v.md", usr.HomeDir, folder, folder, dateString)
-	notebook.FilePath(
+	notebook := Notebook{Name:folder}
+	err = notebook.Load()
+  if err != nil {
+    panic(err)
+  }
+	tag := notebook.FileTag(date)
+	file := notebook.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
 
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
@@ -61,7 +62,9 @@ func main() {
 		editor = "vim"
 	}
 
-	cmd := exec.Command(editor, fileName)
+  //TODO: Mkdir and template file
+
+	cmd := exec.Command(editor, file)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
