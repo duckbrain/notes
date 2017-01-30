@@ -5,9 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"strings"
 	"time"
-	"path"
 
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
@@ -46,11 +46,11 @@ func main() {
 	}
 	DocumentsDir = path.Join(usr.HomeDir, "Documents")
 
-	notebook := Notebook{Name:folder}
+	notebook := Notebook{Name: folder}
 	err = notebook.Load()
-  if err != nil {
-    panic(err)
-  }
+	if err != nil {
+		panic(err)
+	}
 	tag := notebook.FileTag(date)
 	file := notebook.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
 
@@ -62,7 +62,7 @@ func main() {
 		editor = "vim"
 	}
 
-  //TODO: Mkdir and template file
+	//TODO: Mkdir and template file
 
 	cmd := exec.Command(editor, file)
 	cmd.Stdin = os.Stdin
