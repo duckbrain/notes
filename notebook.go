@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"path"
 	"strconv"
+	"text/template"
 	"time"
 
 	"github.com/ericaro/frontmatter"
@@ -54,4 +56,21 @@ func (n Notebook) FileTag(date time.Time) string {
 	}
 
 	return date.Format("2006-01-02")
+}
+
+func (n Notebook) TemplateResult(date time.Time) ([]byte, error) {
+	t := template.New(n.Name)
+	t, err := t.Parse(n.Template)
+	if err != nil {
+		return nil, err
+	}
+	buffer := &bytes.Buffer{}
+	err = t.Execute(buffer, struct {
+		Notebook
+		Date time.Time
+	}{
+		n,
+		date,
+	})
+	return buffer.Bytes(), err
 }
