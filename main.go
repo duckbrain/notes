@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -74,7 +73,10 @@ func main() {
 	os.MkdirAll(notebook.FilePath(""), os.ModePerm)
 	res, err := notebook.TemplateResult(date)
 	if err == nil {
-		ioutil.WriteFile(file, res, os.ModePerm)
+		//TODO: Warn on errors
+		f, _ := os.OpenFile(file, os.O_CREATE&os.O_EXCL, os.ModePerm)
+		f.Write(res)
+		f.Close()
 	} else {
 		fmt.Println(err)
 	}
