@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,14 +47,6 @@ func main() {
 	}
 	DocumentsDir = path.Join(usr.HomeDir, "Documents")
 
-	notebook := Notebook{Name: folder}
-	err = notebook.Load()
-	if err != nil {
-		panic(err)
-	}
-	tag := notebook.FileTag(date)
-	file := notebook.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
-
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		editor = os.Getenv("VISUAL")
@@ -62,9 +55,24 @@ func main() {
 		editor = "vim"
 	}
 
-	//TODO: Mkdir and template file
+	debug := os.Getenv("DEBUG")
 
-	cmd := exec.Command(editor, file)
+	notebook := Notebook{Name: folder, Folder: folder, Editor: editor}
+	err = notebook.Load()
+	if err != nil {
+		panic(err)
+	}
+	tag := notebook.FileTag(date)
+	file := notebook.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
+
+	if notebook.Editor == "debug" || debug != "" {
+		njson, _ := json.MarshalIndent(notebook, "", "\t")
+		fmt.Println(string(njson))
+	}
+
+	os.MkdirAll(notebook.FilePath(""), os.ModePerm)
+
+	cmd := exec.Command(notebook.Editor, file)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()

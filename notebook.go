@@ -18,7 +18,9 @@ type Notebook struct {
 	Template string `fm:"content"`
 
 	// The week number of the first week of the weekly iteration
-	WeekStart int
+	WeekStart int `yaml:"weekStart"`
+
+	Editor string
 }
 
 func (n Notebook) FilePath(p string) string {
