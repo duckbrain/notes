@@ -35,6 +35,10 @@ func main() {
 			fmt.Println(err)
 			return
 		}
+		if result == nil {
+			fmt.Println("Could not understand the date")
+			return
+		}
 		date = result.Time
 	} else {
 		date = time.Now()
@@ -74,8 +78,16 @@ func main() {
 	res, err := notebook.TemplateResult(date)
 	if err == nil {
 		//TODO: Warn on errors
-		f, _ := os.OpenFile(file, os.O_CREATE&os.O_EXCL, os.ModePerm)
-		f.Write(res)
+		flags := os.O_WRONLY|os.O_CREATE
+		f, err := os.OpenFile(file, flags, 0622)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			_, err = f.Write(res)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 		f.Close()
 	} else {
 		fmt.Println(err)

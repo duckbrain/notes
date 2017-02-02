@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"strconv"
 	"text/template"
 	"time"
 
@@ -52,7 +51,7 @@ func (n Notebook) FileTag(date time.Time) string {
 	if n.WeekStart != 0 {
 		_, week := date.ISOWeek()
 		week -= n.WeekStart
-		return strconv.Itoa(week)
+		return fmt.Sprintf("%02v", week)
 	}
 
 	return date.Format("2006-01-02")
