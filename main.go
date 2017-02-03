@@ -78,7 +78,7 @@ func main() {
 	res, err := notebook.TemplateResult(date)
 	if err == nil {
 		//TODO: Warn on errors
-		flags := os.O_WRONLY|os.O_CREATE
+		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 		f, err := os.OpenFile(file, flags, 0622)
 		if err != nil {
 			fmt.Println(err)
