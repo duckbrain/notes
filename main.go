@@ -13,9 +13,9 @@ import (
 	"github.com/olebedev/when"
 	"github.com/olebedev/when/rules/common"
 	"github.com/olebedev/when/rules/en"
-)
 
-var DocumentsDir string
+	"github.com/duckbrain/notes/notebook"
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -49,35 +49,43 @@ func main() {
 		fmt.Println("Error finding home directory")
 		return
 	}
-	DocumentsDir = path.Join(usr.HomeDir, "Documents")
+	notebook.DocumentsDir = path.Join(usr.HomeDir, "Documents")
 
-	editor := os.Getenv("EDITOR")
+	editor := os.Getenv("NOTES_EDITOR")
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
 	if editor == "" {
 		editor = os.Getenv("VISUAL")
 	}
 	if editor == "" {
-		editor = "vim"
+		editor = "vi" // Default to vi if nothing else
 	}
 
-	debug := os.Getenv("DEBUG")
+	var debug bool
+	switch os.Getenv("DEBUG") {
+	case "1", "true", "TRUE":
+		debug = true
+	default:
+		debug = false
+	}
 
-	notebook := Notebook{Name: folder, Folder: folder, Editor: editor}
-	err = notebook.Load()
+	n := notebook.Notebook{Name: folder, Folder: folder, Editor: editor}
+	err = n.Load()
 	if err != nil {
 		panic(err)
 	}
-	tag := notebook.FileTag(date)
-	file := notebook.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
+	tag := n.FileTag(date)
+	file := n.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
 
-	if notebook.Editor == "debug" || debug != "" {
-		njson, _ := json.MarshalIndent(notebook, "", "\t")
+	if debug {
+		njson, _ := json.MarshalIndent(n, "", "\t")
 		fmt.Println(string(njson))
 	}
 
-	os.MkdirAll(notebook.FilePath(""), os.ModePerm)
-	res, err := notebook.TemplateResult(date)
+	os.MkdirAll(n.FilePath(""), os.ModePerm)
+	res, err := n.TemplateResult(date)
 	if err == nil {
-		//TODO: Warn on errors
 		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 		f, err := os.OpenFile(file, flags, 0622)
 		if err != nil {
@@ -87,13 +95,13 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
+			f.Close()
 		}
-		f.Close()
 	} else {
 		fmt.Println(err)
 	}
 
-	cmd := exec.Command(notebook.Editor, file)
+	cmd := exec.Command(n.Editor, file)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
