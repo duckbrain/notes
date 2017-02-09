@@ -23,22 +23,27 @@ func main() {
 	case Help:
 		flag.PrintDefaults()
 	case List:
-		notebooks, err := notebook.All()
-		handleErr(err)
-		for _, n := range notebooks {
-			fmt.Println(n)
-		}
+		printNotebooks()
 	default:
 		openDoc()
 	}
 
 }
 
+func printNotebooks() {
+	notebooks, err := notebook.All()
+	handleErr(err)
+	for _, n := range notebooks {
+		fmt.Println(n)
+	}
+}
+
 func openDoc() {
 	args := flag.Args()
 
 	if len(args) < 1 {
-		handleErr(fmt.Errorf("You must have a folder name"))
+		printNotebooks()
+		return
 	}
 	var date time.Time
 
