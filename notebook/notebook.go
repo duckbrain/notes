@@ -11,16 +11,16 @@ import (
 	"github.com/ericaro/frontmatter"
 )
 
-// A notebook to create entries in. 
+// A notebook to create entries in.
 //
 // The fields in this struct are loaded from the front matter in the template files.
 type Notebook struct {
 	// The name in the file name. Defaults to the notebook name by search.
-	Name   string
+	Name string
 
 	// Purely for the templating, represents the title to display at the top
 	// of a template. Defaults to the value in Name.
-	Title   string
+	Title string
 
 	// The name of the directory the notebook is located in. Often multiple
 	// notebooks are grouped locally in one directory, but seperated by having
@@ -34,6 +34,12 @@ type Notebook struct {
 	WeekStart int `yaml:"weekStart"`
 
 	Editor string
+
+	Notebooks []Notebook
+}
+
+func (n Notebook) String() string {
+	return n.Name
 }
 
 // Returns a file path of a document given by name.
@@ -44,7 +50,7 @@ func (n Notebook) FilePath(p string) string {
 // Loads the configuration for the notebook.
 //
 // Load a global configuration in the home directory before overwriting
-// values with the config file currently used, finally loading the 
+// values with the config file currently used, finally loading the
 // configuration parameters that are default if not set.
 func (n *Notebook) Load() error {
 	if n.Name == "" {
@@ -62,11 +68,12 @@ func (n *Notebook) Load() error {
 
 	// Load the configuration for this notebook
 	configFile, err = ioutil.ReadFile(n.FilePath(".notes"))
-	if err == nil {
-		err = frontmatter.Unmarshal(configFile, n)
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
+	}
+	err = frontmatter.Unmarshal(configFile, n)
+	if err != nil {
+		return err
 	}
 
 	// Load any unset values from defaults
@@ -85,7 +92,7 @@ func (n *Notebook) loadDefaults() {
 	}
 }
 
-// Gets a tag to distinguish a document for one day from another. Typically a 
+// Gets a tag to distinguish a document for one day from another. Typically a
 // variation of the date or the number of weeks that have passed since a specific week.
 func (n Notebook) FileTag(date time.Time) string {
 	if n.WeekStart != 0 {

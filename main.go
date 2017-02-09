@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
-	"path"
 	"strings"
 	"time"
 
@@ -18,67 +17,53 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("You must have a folder name")
-		return
+	flag.Parse()
+
+	switch {
+	case Help:
+		flag.PrintDefaults()
+	case List:
+		notebooks, err := notebook.All()
+		handleErr(err)
+		for _, n := range notebooks {
+			fmt.Println(n)
+		}
+	default:
+		openDoc()
 	}
-	folder := os.Args[1]
+
+}
+
+func openDoc() {
+	args := flag.Args()
+
+	if len(args) < 1 {
+		handleErr(fmt.Errorf("You must have a folder name"))
+	}
 	var date time.Time
 
-	if len(os.Args) > 2 {
+	if len(args) > 1 {
 		w := when.New(nil)
 		w.Add(en.All...)
 		w.Add(common.All...)
-		dateString := strings.Join(os.Args[2:], " ")
+		dateString := strings.Join(args[1:], " ")
 		result, err := w.Parse(dateString, time.Now())
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		handleErr(err)
 		if result == nil {
-			fmt.Println("Could not understand the date")
-			return
+			handleErr(fmt.Errorf("Could not understand the date"))
 		}
 		date = result.Time
 	} else {
 		date = time.Now()
 	}
 
-	usr, err := user.Current()
-	if err != nil {
-		fmt.Println("Error finding home directory")
-		return
-	}
-	notebook.DocumentsDir = path.Join(usr.HomeDir, "Documents")
-
-	editor := os.Getenv("NOTES_EDITOR")
-	if editor == "" {
-		editor = os.Getenv("EDITOR")
-	}
-	if editor == "" {
-		editor = os.Getenv("VISUAL")
-	}
-	if editor == "" {
-		editor = "vi" // Default to vi if nothing else
-	}
-
-	var debug bool
-	switch os.Getenv("DEBUG") {
-	case "1", "true", "TRUE":
-		debug = true
-	default:
-		debug = false
-	}
-
-	n := notebook.Notebook{Name: folder, Folder: folder, Editor: editor}
-	err = n.Load()
-	if err != nil {
-		panic(err)
-	}
+	folder := args[0]
+	n, err := notebook.Search(folder)
+	handleErr(err)
 	tag := n.FileTag(date)
 	file := n.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
 
-	if debug {
+	if Debug {
 		njson, _ := json.MarshalIndent(n, "", "\t")
 		fmt.Println(string(njson))
 	}
@@ -105,8 +90,17 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
-	if err != nil {
-		fmt.Println(err)
+	handleErr(err)
+}
+
+func handleErr(err error) {
+	if err == nil {
 		return
+	}
+	if Debug {
+		panic(err)
+	} else {
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }
