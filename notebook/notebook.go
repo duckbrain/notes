@@ -52,7 +52,9 @@ func (n Notebook) FilePath(p string) string {
 // Load a global configuration in the home directory before overwriting
 // values with the config file currently used, finally loading the
 // configuration parameters that are default if not set.
-func (n *Notebook) Load() error {
+func (n *Notebook) Load(name string) error {
+	n.Name = name
+
 	if n.Name == "" {
 		return fmt.Errorf("Cannot load notebooks without a name")
 	}
@@ -105,19 +107,31 @@ func (n Notebook) FileTag(date time.Time) string {
 }
 
 // Renders the template with the values given
-func (n Notebook) TemplateResult(date time.Time) ([]byte, error) {
+func (n Notebook) Render(date time.Time) ([]byte, error) {
 	t := template.New(n.Name)
 	t, err := t.Parse(n.Template)
 	if err != nil {
 		return nil, err
 	}
 	buffer := &bytes.Buffer{}
-	err = t.Execute(buffer, struct {
+
+	data := struct {
 		Notebook
 		Date time.Time
-	}{
-		n,
-		date,
-	})
+
+		Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday time.Time
+	}{}
+
+	data.Notebook = n
+	data.Date = date
+	data.Sunday = date.AddDate(0, 0, -int(date.Weekday()))
+	data.Monday = data.Sunday.AddDate(0, 0, 1)
+	data.Tuesday = data.Sunday.AddDate(0, 0, 2)
+	data.Wednesday = data.Sunday.AddDate(0, 0, 3)
+	data.Thursday = data.Sunday.AddDate(0, 0, 4)
+	data.Friday = data.Sunday.AddDate(0, 0, 5)
+	data.Saturday = data.Sunday.AddDate(0, 0, 6)
+
+	err = t.Execute(buffer, data)
 	return buffer.Bytes(), err
 }

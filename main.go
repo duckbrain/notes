@@ -69,7 +69,7 @@ func openDoc() {
 	}
 
 	os.MkdirAll(n.FilePath(""), os.ModePerm)
-	res, err := n.TemplateResult(date)
+	res, err := n.Render(date)
 	if err == nil {
 		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 		f, err := os.OpenFile(file, flags, 0622)

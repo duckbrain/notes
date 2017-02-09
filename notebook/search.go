@@ -50,8 +50,8 @@ func All() ([]Notebook, error) {
 			continue
 		}
 		name := file.Name()
-		n := Notebook{Name: name, Folder: name, Editor: Defaults.Editor}
-		err := n.Load()
+		n := Defaults
+		err := n.Load(name)
 		if os.IsNotExist(err) {
 			continue
 		}
