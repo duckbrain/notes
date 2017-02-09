@@ -23,7 +23,8 @@ func Search(text string) (Notebook, error) {
 	matchCount := 0
 	for _, notebook := range notebooks {
 		name := strings.ToLower(notebook.Name)
-		if strings.Index(name, text) == 0 {
+		title := strings.ToLower(notebook.Title)
+		if strings.Index(name, text) == 0 || strings.Index(title, text) == 0 {
 			n = notebook
 			matchCount++
 			if name == text {

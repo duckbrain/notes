@@ -62,11 +62,10 @@ func openDoc() {
 		date = time.Now()
 	}
 
-	folder := args[0]
-	n, err := notebook.Search(folder)
+	n, err := notebook.Search(args[0])
 	handleErr(err)
 	tag := n.FileTag(date)
-	file := n.FilePath(fmt.Sprintf("%v-%v.md", folder, tag))
+	file := n.FilePath(fmt.Sprintf("%v-%v.md", n.Name, tag))
 
 	if Debug {
 		njson, _ := json.MarshalIndent(n, "", "\t")
