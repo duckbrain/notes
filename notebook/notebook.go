@@ -33,9 +33,14 @@ type Notebook struct {
 	// The week number of the first week of the weekly iteration
 	WeekStart int `yaml:"weekStart"`
 
+	// The program to edit the notebook in
 	Editor string
 
+	// Sub-notebooks that inherit this notebook's folder and other properties
 	Notebooks []Notebook
+
+	// The days of the week this notebook can be used
+	Weekdays []time.Weekday
 }
 
 func (n Notebook) String() string {
@@ -95,7 +100,8 @@ func (n *Notebook) loadDefaults() {
 }
 
 // Gets a tag to distinguish a document for one day from another. Typically a
-// variation of the date or the number of weeks that have passed since a specific week.
+// variation of the date or the number of weeks that have passed since a
+// specific week.
 func (n Notebook) FileTag(date time.Time) string {
 	if n.WeekStart != 0 {
 		_, week := date.ISOWeek()
