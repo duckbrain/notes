@@ -124,6 +124,7 @@ func (n Notebook) Render(date time.Time) ([]byte, error) {
 	data := struct {
 		Notebook
 		Date time.Time
+		Tag  string
 
 		Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday time.Time
 	}{}
@@ -137,6 +138,7 @@ func (n Notebook) Render(date time.Time) ([]byte, error) {
 	data.Thursday = data.Sunday.AddDate(0, 0, 4)
 	data.Friday = data.Sunday.AddDate(0, 0, 5)
 	data.Saturday = data.Sunday.AddDate(0, 0, 6)
+	data.Tag = n.FileTag(date)
 
 	err = t.Execute(buffer, data)
 	return buffer.Bytes(), err
