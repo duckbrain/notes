@@ -12,6 +12,7 @@ import (
 var Debug bool
 var Help bool
 var List bool
+var GPGPath string
 
 func init() {
 	home := ""
@@ -34,4 +35,5 @@ func init() {
 	flag.BoolVar(&List, "list", false, "List the notebooks found")
 	flag.StringVar(&notebook.DocumentsDir, "docs", home, "`Directory` where the documents are stored")
 	flag.StringVar(&notebook.Defaults.Editor, "editor", editor, "Editor to open documents in")
+	flag.StringVar(&GPGPath, "pgp", "gpg", "Path to GnuPG installed on the system")
 }

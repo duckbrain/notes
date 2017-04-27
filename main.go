@@ -70,6 +70,25 @@ func openDoc() {
 
 	tag := n.FileTag(date)
 	file := n.FilePath(fmt.Sprintf("%v-%v.md", n.Name, tag))
+	
+	if len(n.PGPID) > 0 {
+		gpgfile := n.FilePath(fmt.Sprintf("%v-%v.md.gpg", n.Name, tag))
+		if _, err := os.Stat(gpgfile); err == nil {
+		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
+		f, err := os.OpenFile(file, flags, 0622)
+		handleErr(err)
+
+		cmd := exec.Command(GPGPath, "--decrypt", gpgfile)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = f
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		if err != nil {
+			f.Close()
+			os.Remove(file)
+		}
+		}
+	}
 
 	if Debug {
 		njson, _ := json.MarshalIndent(n, "", "\t")
@@ -100,6 +119,17 @@ func openDoc() {
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
 	handleErr(err)
+
+	if len(n.PGPID) > 0 {
+		cmd := exec.Command(GPGPath, "--encrypt", "--yes", "--recipient", n.PGPID, file)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
+		handleErr(err)
+
+		err = os.Remove(file)
+		handleErr(err)
+	}
 }
 
 func handleErr(err error) {

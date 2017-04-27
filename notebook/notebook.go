@@ -41,6 +41,9 @@ type Notebook struct {
 
 	// The days of the week this notebook can be used
 	Weekdays []time.Weekday
+
+	// If set, causes the notes to be encrypted using PGP with the specified ID
+	PGPID string `yaml:"pgpid"`
 }
 
 func (n Notebook) String() string {
