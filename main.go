@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 
@@ -68,25 +69,25 @@ func openDoc() {
 	date, err = n.AllowedDate(date)
 	handleErr(err)
 
-	tag := n.FileTag(date)
-	file := n.FilePath(fmt.Sprintf("%v-%v.md", n.Name, tag))
-	
-	if len(n.PGPID) > 0 {
-		gpgfile := n.FilePath(fmt.Sprintf("%v-%v.md.gpg", n.Name, tag))
-		if _, err := os.Stat(gpgfile); err == nil {
-		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
-		f, err := os.OpenFile(file, flags, 0622)
-		handleErr(err)
+	file, err := n.FileName(date)
+	handleErr(err)
 
-		cmd := exec.Command(GPGPath, "--decrypt", gpgfile)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = f
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			f.Close()
-			os.Remove(file)
-		}
+	if len(n.PGPID) > 0 {
+		gpgfile := fmt.Sprintf("%v.gpg", file)
+		if _, err := os.Stat(gpgfile); err == nil {
+			flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
+			f, err := os.OpenFile(file, flags, 0622)
+			handleErr(err)
+
+			cmd := exec.Command(GPGPath, "--decrypt", gpgfile)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = f
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				f.Close()
+				os.Remove(file)
+			}
 		}
 	}
 
@@ -96,7 +97,7 @@ func openDoc() {
 		fmt.Println(string(njson))
 	}
 
-	os.MkdirAll(n.FilePath(""), os.ModePerm)
+	os.MkdirAll(path.Dir(file), os.ModePerm)
 	res, err := n.Render(date)
 	if err == nil {
 		flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL

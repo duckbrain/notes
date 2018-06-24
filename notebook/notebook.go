@@ -44,6 +44,8 @@ type Notebook struct {
 
 	// If set, causes the notes to be encrypted using PGP with the specified ID
 	PGPID string `yaml:"pgpid"`
+
+	FileNameTemplate string `yaml:"filename"`
 }
 
 func (n Notebook) String() string {
@@ -51,7 +53,7 @@ func (n Notebook) String() string {
 }
 
 // Returns a file path of a document given by name.
-func (n Notebook) FilePath(p string) string {
+func (n Notebook) filePath(p string) string {
 	return path.Join(DocumentsDir, n.Name, p)
 }
 
@@ -77,7 +79,7 @@ func (n *Notebook) Load(name string) error {
 	}
 
 	// Load the configuration for this notebook
-	configFile, err = ioutil.ReadFile(n.FilePath(".notes"))
+	configFile, err = ioutil.ReadFile(n.filePath(".notes"))
 	if err != nil {
 		return err
 	}
@@ -102,23 +104,9 @@ func (n *Notebook) loadDefaults() {
 	}
 }
 
-// Gets a tag to distinguish a document for one day from another. Typically a
-// variation of the date or the number of weeks that have passed since a
-// specific week.
-func (n Notebook) FileTag(date time.Time) string {
-	if n.WeekStart != 0 {
-		_, week := date.ISOWeek()
-		week -= n.WeekStart
-		return fmt.Sprintf("%02v", week)
-	}
-
-	return date.Format("2006-01-02")
-}
-
-// Renders the template with the values given
-func (n Notebook) Render(date time.Time) ([]byte, error) {
+func (n Notebook) runTmp(nameTmp, tmp string, date time.Time) ([]byte, error) {
 	t := template.New(n.Name)
-	t, err := t.Parse(n.Template)
+	t, err := t.Parse(tmp)
 	if err != nil {
 		return nil, err
 	}
@@ -127,13 +115,17 @@ func (n Notebook) Render(date time.Time) ([]byte, error) {
 	data := struct {
 		Notebook
 		Date time.Time
-		Tag  string
+		Week int
 
 		Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday time.Time
 	}{}
 
+	_, week := date.ISOWeek()
+	week -= n.WeekStart
+
 	data.Notebook = n
 	data.Date = date
+	data.Week = week
 	data.Sunday = date.AddDate(0, 0, -int(date.Weekday()))
 	data.Monday = data.Sunday.AddDate(0, 0, 1)
 	data.Tuesday = data.Sunday.AddDate(0, 0, 2)
@@ -141,8 +133,28 @@ func (n Notebook) Render(date time.Time) ([]byte, error) {
 	data.Thursday = data.Sunday.AddDate(0, 0, 4)
 	data.Friday = data.Sunday.AddDate(0, 0, 5)
 	data.Saturday = data.Sunday.AddDate(0, 0, 6)
-	data.Tag = n.FileTag(date)
 
 	err = t.Execute(buffer, data)
 	return buffer.Bytes(), err
+}
+
+// Gets a tag to distinguish a document for one day from another. Typically a
+// variation of the date or the number of weeks that have passed since a
+// specific week.
+func (n Notebook) FileName(date time.Time) (string, error) {
+	tmp := n.FileNameTemplate
+	if len(tmp) == 0 {
+		if n.WeekStart != 0 {
+			tmp = "{{.Name}}-{{.Week}}.md"
+		} else {
+			tmp = `{{.Name}}-{{.Date.Format "2006-01-02"}}.md`
+		}
+	}
+	res, err := n.runTmp("%v Filename template", tmp, date)
+	return n.filePath(string(res)), err
+}
+
+// Renders the template with the values given
+func (n Notebook) Render(date time.Time) ([]byte, error) {
+	return n.runTmp("%v", n.Template, date)
 }
