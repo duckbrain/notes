@@ -20,15 +20,14 @@ func init() {
 	if err == nil {
 		home = path.Join(usr.HomeDir, "Documents")
 	}
-	var editor string
-	os.Getenv("NOTES_EDITOR")
-	if editor == "" {
+	editor := os.Getenv("NOTES_EDITOR")
+	if len(editor) == 0 {
 		editor = os.Getenv("EDITOR")
 	}
-	if editor == "" {
+	if len(editor) == 0 {
 		editor = os.Getenv("VISUAL")
 	}
-	if editor == "" {
+	if len(editor) == 0 {
 		editor = "vi" // Default to vi if nothing else
 	}
 	flag.BoolVar(&Debug, "debug", false, "Print out debugging information")

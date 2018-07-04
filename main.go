@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -19,6 +21,12 @@ import (
 
 func main() {
 	flag.Parse()
+	log.Println("default editor", notebook.Defaults.Editor)
+
+	if !Debug {
+		log.SetFlags(0)
+		log.SetOutput(ioutil.Discard)
+	}
 
 	switch {
 	case Help:
@@ -115,6 +123,7 @@ func openDoc() {
 		fmt.Println(err)
 	}
 
+	log.Printf("launch %v %v", n.Editor, file)
 	cmd := exec.Command(n.Editor, file)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

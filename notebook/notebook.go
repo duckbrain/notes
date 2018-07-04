@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path"
 	"text/template"
 	"time"
@@ -54,7 +55,7 @@ func (n Notebook) String() string {
 
 // Returns a file path of a document given by name.
 func (n Notebook) filePath(p string) string {
-	return path.Join(DocumentsDir, n.Name, p)
+	return path.Join(DocumentsDir, n.Folder, p)
 }
 
 // Loads the configuration for the notebook.
@@ -63,7 +64,10 @@ func (n Notebook) filePath(p string) string {
 // values with the config file currently used, finally loading the
 // configuration parameters that are default if not set.
 func (n *Notebook) Load(name string) error {
+	log.Printf("editor from default %v", n.Editor)
 	n.Name = name
+	n.Folder = name
+	n.Title = name
 
 	if n.Name == "" {
 		return fmt.Errorf("Cannot load notebooks without a name")
@@ -71,15 +75,19 @@ func (n *Notebook) Load(name string) error {
 
 	// Load the global configuration
 	configFile, err := ioutil.ReadFile(path.Join(DocumentsDir, ".notes"))
+	log.Printf("open main config %v", path.Join(DocumentsDir, ".notes"))
 	if err == nil {
 		err = frontmatter.Unmarshal(configFile, n)
+		log.Printf("editor after main config %v", n.Editor)
 		if err != nil {
 			return err
 		}
 	}
 
+	log.Printf("open directory config %v", n.filePath(".notes"))
 	// Load the configuration for this notebook
 	configFile, err = ioutil.ReadFile(n.filePath(".notes"))
+	log.Printf("editor after directory config %v", n.Editor)
 	if err != nil {
 		return err
 	}
@@ -88,20 +96,32 @@ func (n *Notebook) Load(name string) error {
 		return err
 	}
 
-	// Load any unset values from defaults
-	n.loadDefaults()
+	for i, c := range n.Notebooks {
+		if len(c.Name) == 0 {
+			return fmt.Errorf("Sub notebook needs a name")
+		}
+		if c.Name == n.Name {
+			return fmt.Errorf("Sub notebook needs a name different from the parent")
+		}
+		if len(c.Title) == 0 {
+			c.Title = c.Name
+		}
+		c.Folder = n.Folder
+		c.Template = n.Template
+		c.FileNameTemplate = n.FileNameTemplate
+		c.WeekStart = n.WeekStart
+		c.Editor = n.Editor
+		if len(c.Weekdays) == 0 {
+			c.Weekdays = n.Weekdays
+		}
+		if len(c.PGPID) == 0 {
+			c.PGPID = n.PGPID
+		}
+
+		n.Notebooks[i] = c
+	}
 
 	return nil
-}
-
-// Loads default values into needed fields if they are not set.
-func (n *Notebook) loadDefaults() {
-	if n.Folder == "" {
-		n.Folder = n.Name
-	}
-	if n.Title == "" {
-		n.Title = n.Name
-	}
 }
 
 func (n Notebook) runTmp(nameTmp, tmp string, date time.Time) ([]byte, error) {

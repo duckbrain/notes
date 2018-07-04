@@ -3,6 +3,7 @@ package notebook
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 )
@@ -35,11 +36,15 @@ func Search(text string) (Notebook, error) {
 	if matchCount > 1 {
 		return n, fmt.Errorf("Name not specific enough. Matches %v notebooks", matchCount)
 	}
+	if matchCount < 1 {
+		return n, fmt.Errorf("Did not find matching notebook")
+	}
 	return n, nil
 }
 
 // Finds all notebooks that can be used and returns them
 func All() ([]Notebook, error) {
+	log.Printf("ls %v", DocumentsDir)
 	files, err := ioutil.ReadDir(DocumentsDir)
 	if err != nil {
 		return nil, err
@@ -52,6 +57,7 @@ func All() ([]Notebook, error) {
 		}
 		name := file.Name()
 		n := Defaults
+		log.Printf("open notebook %v", name)
 		err := n.Load(name)
 		if os.IsNotExist(err) {
 			continue
