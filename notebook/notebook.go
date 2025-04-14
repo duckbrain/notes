@@ -3,14 +3,21 @@ package notebook
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/ericaro/frontmatter"
 )
+
+// The directory where all notebooks are stashed
+var DocumentsDir string
+
+// Default Options
+var Defaults Notebook
 
 // A notebook to create entries in.
 //
@@ -74,7 +81,7 @@ func (n *Notebook) Load(name string) error {
 	}
 
 	// Load the global configuration
-	configFile, err := ioutil.ReadFile(path.Join(DocumentsDir, ".notes"))
+	configFile, err := os.ReadFile(path.Join(DocumentsDir, ".notes"))
 	log.Printf("open main config %v", path.Join(DocumentsDir, ".notes"))
 	if err == nil {
 		err = frontmatter.Unmarshal(configFile, n)
@@ -86,7 +93,7 @@ func (n *Notebook) Load(name string) error {
 
 	log.Printf("open directory config %v", n.filePath(".notes"))
 	// Load the configuration for this notebook
-	configFile, err = ioutil.ReadFile(n.filePath(".notes"))
+	configFile, err = os.ReadFile(n.filePath(".notes"))
 	log.Printf("editor after directory config %v", n.Editor)
 	if err != nil {
 		return err
@@ -124,7 +131,7 @@ func (n *Notebook) Load(name string) error {
 	return nil
 }
 
-func (n Notebook) runTmp(nameTmp, tmp string, date time.Time) ([]byte, error) {
+func (n Notebook) runTmp(tmp string, date time.Time) ([]byte, error) {
 	t := template.New(n.Name)
 	t, err := t.Parse(tmp)
 	if err != nil {
@@ -170,11 +177,123 @@ func (n Notebook) FileName(date time.Time) (string, error) {
 			tmp = `{{.Name}}-{{.Date.Format "2006-01-02"}}.md`
 		}
 	}
-	res, err := n.runTmp("%v Filename template", tmp, date)
+	res, err := n.runTmp(tmp, date)
 	return n.filePath(string(res)), err
 }
 
 // Renders the template with the values given
 func (n Notebook) Render(date time.Time) ([]byte, error) {
-	return n.runTmp("%v", n.Template, date)
+	var tmp string = n.Template
+	return n.runTmp(tmp, date)
+}
+
+// Finds a notebook based on the name. Returns an error if the name is not
+// found or note specific enough to limit to one.
+//
+// Search matches on the first few characters, similar to how git matches
+// commit hashs, if the full name is not provided, the first characters
+// are allowed, as long as there are no duplicates
+func Search(text string) (Notebook, error) {
+	n := Notebook{}
+	text = strings.ToLower(text)
+	notebooks, err := All()
+	if err != nil {
+		return n, err
+	}
+	matchCount := 0
+	for _, notebook := range notebooks {
+		name := strings.ToLower(notebook.Name)
+		title := strings.ToLower(notebook.Title)
+		if strings.Index(name, text) == 0 || strings.Index(title, text) == 0 {
+			n = notebook
+			matchCount++
+			if name == text {
+				return n, nil
+			}
+		}
+	}
+	if matchCount > 1 {
+		return n, fmt.Errorf("Name not specific enough. Matches %v notebooks", matchCount)
+	}
+	if matchCount < 1 {
+		return n, fmt.Errorf("Did not find matching notebook")
+	}
+	return n, nil
+}
+
+// Finds all notebooks that can be used and returns them
+func All() ([]Notebook, error) {
+	log.Printf("ls %v", DocumentsDir)
+	files, err := os.ReadDir(DocumentsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	notebooks := make([]Notebook, 0)
+	for _, file := range files {
+		if !file.IsDir() {
+			continue
+		}
+		name := file.Name()
+		n := Defaults
+		log.Printf("open notebook %v", name)
+		err := n.Load(name)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		notebooks = append(notebooks, n)
+		notebooks = append(notebooks, n.Notebooks...)
+	}
+	return notebooks, nil
+}
+
+func (n *Notebook) Allowed(t time.Time) bool {
+	if n.WeekStart > 0 {
+		_, week := t.ISOWeek()
+		if week < n.WeekStart {
+			return false
+		}
+	}
+
+	if len(n.Weekdays) > 0 {
+		weekday := t.Weekday()
+		var found bool
+		for _, w := range n.Weekdays {
+			if w == weekday {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (n *Notebook) AllowedDate(t time.Time) (time.Time, error) {
+	if n.Allowed(t) {
+		return t, nil
+	}
+
+	const day = time.Hour * 24
+
+	// Go backwards to the beginning of the week
+	for d := t; d.Weekday() >= 0; d = d.Add(-day) {
+		if n.Allowed(d) {
+			return d, nil
+		}
+	}
+
+	// Try the next 7 days
+	for i := 1; i <= 7; i++ {
+		if d := t.Add(day * time.Duration(i)); n.Allowed(d) {
+			return d, nil
+		}
+	}
+
+	return t, fmt.Errorf("Could not find an allowed day")
 }

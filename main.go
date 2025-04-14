@@ -1,3 +1,5 @@
+// This program provides a quick way to open notes for me. You are free to use
+// it too.
 package main
 
 import (
@@ -8,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"strings"
 	"time"
@@ -18,6 +21,36 @@ import (
 
 	"github.com/duckbrain/notes/notebook"
 )
+
+var (
+	Debug   bool
+	Help    bool
+	List    bool
+	GPGPath string
+)
+
+func init() {
+	home := ""
+	usr, err := user.Current()
+	if err == nil {
+		home = path.Join(usr.HomeDir, "Documents")
+	}
+	editor := os.Getenv("NOTES_EDITOR")
+	if len(editor) == 0 {
+		editor = os.Getenv("EDITOR")
+	}
+	if len(editor) == 0 {
+		editor = os.Getenv("VISUAL")
+	}
+	if len(editor) == 0 {
+		editor = "vi" // Default to vi if nothing else
+	}
+	flag.BoolVar(&Debug, "debug", false, "Print out debugging information")
+	flag.BoolVar(&List, "list", false, "List the notebooks found")
+	flag.StringVar(&notebook.DocumentsDir, "docs", home, "`Directory` where the documents are stored")
+	flag.StringVar(&notebook.Defaults.Editor, "editor", editor, "Editor to open documents in")
+	flag.StringVar(&GPGPath, "pgp", "gpg", "Path to GnuPG installed on the system")
+}
 
 func main() {
 	flag.Parse()
@@ -36,7 +69,6 @@ func main() {
 	default:
 		openDoc()
 	}
-
 }
 
 func printNotebooks() {
